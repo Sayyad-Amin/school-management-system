@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     git \
     curl \
+    # Ensure libzip-dev is installed early for zip extension
     libzip-dev \
     libonig-dev \
     libxml2-dev \
@@ -24,20 +25,29 @@ RUN apt-get update && apt-get install -y \
     libgd-dev \
     # Dependencies for pdo_mysql
     libmariadb-dev \
+    # Add autoconf for build configuration
+    autoconf \
     # Node.js (Install LTS version) and npm
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install PHP extensions required by Laravel and dependencies
-# Note: Some extensions might be included or named differently in PHP 8.1
-# Tokenizer is often built-in with PHP 8.1+
-# Explicitly configure and install zip extension
-RUN docker-php-ext-configure zip \
-    && docker-php-ext-install zip \
-    # Install other extensions
-    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd dom xml ctype json opcache
+# Install PHP extensions using the more robust install-php-extensions script
+# See https://github.com/mlocati/docker-php-extension-installer
+COPY --from=mlocati/php-extension-installer /usr/bin/install-php-extensions /usr/local/bin/
+RUN install-php-extensions \
+    zip \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    dom \
+    xml \
+    ctype \
+    opcache # Let the script handle enabling opcache if needed
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
