@@ -59,12 +59,14 @@ COPY . /var/www/html
 COPY package.json package-lock.json ./
 RUN npm install
 
-# Copy composer files and install PHP dependencies
-COPY composer.json composer.lock ./
-RUN composer install --no-interaction --optimize-autoloader --no-dev
+# Copy composer file (ignore lock file for update)
+COPY composer.json ./
+# Remove existing lock file if present and run install (effectively an update)
+RUN rm -f composer.lock && \
+    composer install --no-interaction --optimize-autoloader --no-dev
 
 # Copy application code again to ensure latest changes are included
-# (Composer/NPM install might modify files)
+# (Composer/NPM install might modify files, including the new composer.lock)
 COPY . /var/www/html
 
 # Build frontend and backend assets
