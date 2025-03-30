@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # PHP Application Service (using the Dockerfile)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: school-app
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      # Point DB host to the db service name
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-sms_2_0}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      # Ensure APP_URL is set correctly if needed by the app
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      # Set other env vars as needed, potentially from a .env file
+      APP_ENV: ${APP_ENV:-local}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_KEY: ${APP_KEY:-base64:+m0h+ObGNu26eF4MVCgqX1ua0IukSUn7lRYInflNt8A=} # Use the one from .env.example or generate a new one
+    depends_on:
+      - db
+    networks:
+      - schoolnet
+
+  # Nginx Web Server Service
+  web:
+    image: nginx:alpine
+    container_name: school-web
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:80" # Map host port 8000 to container port 80
+    volumes:
+      - .:/var/www/html
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf # Mount custom Nginx config
+    depends_on:
+      - app
+    networks:
+      - schoolnet
+
+  # MySQL Database Service
+  db:
+    image: mysql:5.7 # Using MySQL 5.7 for broader compatibility
+    container_name: school-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-sms_2_0}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root} # Use the same password for root
+      MYSQL_PASSWORD: ${DB_PASSWORD:-root} # Optional: set password for default user
+      MYSQL_USER: ${DB_USERNAME:-root} # Optional: set default user
+    volumes:
+      - db_data:/var/lib/mysql # Persistent storage for database
+    ports:
+      - "${DB_PORT_FORWARD:-3306}:3306" # Forward DB port to host if needed
+    networks:
+      - schoolnet
+
+# Docker Networks
+networks:
+  schoolnet:
+    driver: bridge
+
+# Named Volumes
+volumes:
+  db_data:
+    driver: local
