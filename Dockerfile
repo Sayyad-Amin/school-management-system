@@ -33,7 +33,11 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions required by Laravel and dependencies
 # Note: Some extensions might be included or named differently in PHP 8.1
 # Tokenizer is often built-in with PHP 8.1+
-RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip dom xml ctype json opcache
+# Explicitly configure and install zip extension
+RUN docker-php-ext-configure zip \
+    && docker-php-ext-install zip \
+    # Install other extensions
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd dom xml ctype json opcache
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
